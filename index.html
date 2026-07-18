@@ -7,11 +7,11 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0"
   >
- <title>水やり管理</title>
- 
-    <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <link rel="icon" href="apple-touch-icon.png" type="image/png">
 
+  <title>水やり管理</title>
+
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" href="apple-touch-icon.png" type="image/png">
   <link rel="stylesheet" href="style.css">
 </head>
 
@@ -21,6 +21,18 @@
       <div>
         <p class="eyebrow">PLANT CARE</p>
         <h1>水やり管理</h1>
+
+        <section class="auth-area">
+          <p id="user-info">ログイン状態を確認中...</p>
+
+          <button id="login-button" type="button">
+            Googleでログイン
+          </button>
+
+          <button id="logout-button" type="button" hidden>
+            ログアウト
+          </button>
+        </section>
       </div>
 
       <button id="addPlantButton" class="add-button" type="button">
@@ -33,7 +45,7 @@
     </section>
   </main>
 
-    <script type="module" src="firebase.js"></script>
-    <script src="script.js"></script>
+  <script type="module" src="firebase.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
