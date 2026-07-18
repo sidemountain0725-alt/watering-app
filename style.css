@@ -111,6 +111,13 @@ h1 {
   transform: scale(0.99);
 }
 
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rename-button,
 .delete-button {
   align-self: flex-start;
   padding: 4px 8px;
@@ -118,6 +125,11 @@ h1 {
   color: #879189;
   background: transparent;
   cursor: pointer;
+}
+
+.rename-button:hover,
+.delete-button:hover {
+  color: #355f49;
 }
 
 .empty-message {

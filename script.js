@@ -10,13 +10,18 @@ const defaultPlants = [
   },
   {
     id: crypto.randomUUID(),
-    name: "五葉松",
+    name: "ストレリチア",
+    lastWatered: getDateStringDaysAgo(1)
+  }, 
+  {
+    id: crypto.randomUUID(),
+    name: "アグラオネマカーティシー",
     lastWatered: getDateStringDaysAgo(1)
   },
   {
     id: crypto.randomUUID(),
-    name: "アグラオネマ",
-    lastWatered: getDateStringDaysAgo(4)
+    name: "アグラオネマシルバークイーン",
+    lastWatered: getDateStringDaysAgo(1)
   }
 ];
 
@@ -86,13 +91,26 @@ function renderPlants() {
           </p>
         </div>
 
+    
+
+        <div class="card-actions">
         <button
-          class="delete-button"
-          type="button"
-          aria-label="${escapeHtml(plant.name)}を削除"
+            class="rename-button"
+            type="button"
+            aria-label="${escapeHtml(plant.name)}の名前を変更"
         >
-          削除
+            名前変更
         </button>
+
+        <button
+            class="delete-button"
+            type="button"
+            aria-label="${escapeHtml(plant.name)}を削除"
+        >
+            削除
+        </button>
+        </div>
+        
       </div>
 
       <button class="water-button" type="button">
@@ -101,10 +119,15 @@ function renderPlants() {
     `;
 
     const waterButton = card.querySelector(".water-button");
+    const renameButton = card.querySelector(".rename-button");
     const deleteButton = card.querySelector(".delete-button");
 
     waterButton.addEventListener("click", () => {
       waterPlant(plant.id);
+    });
+
+    renameButton.addEventListener("click", () => {
+    renamePlant(plant.id);
     });
 
     deleteButton.addEventListener("click", () => {
@@ -147,6 +170,35 @@ function waterPlant(plantId) {
   }
 
   plant.lastWatered = getTodayString();
+
+  savePlants();
+  renderPlants();
+}
+
+function renamePlant(plantId) {
+  const plant = plants.find((item) => item.id === plantId);
+
+  if (!plant) {
+    return;
+  }
+
+  const newName = window.prompt(
+    "新しい植物名を入力してください。",
+    plant.name
+  );
+
+  if (newName === null) {
+    return;
+  }
+
+  const trimmedName = newName.trim();
+
+  if (trimmedName === "") {
+    window.alert("植物の名前を入力してください。");
+    return;
+  }
+
+  plant.name = trimmedName;
 
   savePlants();
   renderPlants();
