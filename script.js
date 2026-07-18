@@ -273,3 +273,6 @@ window.setPlants = function(newPlants) {
   plants = newPlants;
   renderPlants();
 };
+window.getPlants = function () {
+  return plants;
+};

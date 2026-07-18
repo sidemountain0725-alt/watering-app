@@ -15,7 +15,9 @@ import {
 import {
   getFirestore,
   collection,
-  getDocs
+  getDocs,
+  doc,
+  setDoc
 } from
   "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -55,6 +57,29 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+async function savePlantsToFirestore(userId, plants) {
+  try {
+    for (const plant of plants) {
+      const plantRef = doc(
+        db,
+        "users",
+        userId,
+        "plants",
+        plant.id
+      );
+
+      await setDoc(plantRef, {
+        name: plant.name,
+        lastWatered: plant.lastWatered
+      });
+    }
+
+    console.log("Firestoreへ保存成功");
+  } catch (error) {
+    console.error("Firestore保存失敗:", error);
+  }
+}
+
 async function loadPlantsFromFirestore(userId) {
   try {
     const plantsCollection = collection(
@@ -73,11 +98,17 @@ async function loadPlantsFromFirestore(userId) {
 
     console.log("Firestoreから読み込み:", firestorePlants);
 
-    if (firestorePlants.length > 0) {
-      window.setPlants(firestorePlants);
-    } else {
-      console.log("Firestoreにはまだ植物データがありません");
-    }
+  if (firestorePlants.length > 0) {
+  window.setPlants(firestorePlants);
+} else {
+  console.log("Firestoreにはまだ植物データがありません");
+
+  const localPlants = window.getPlants();
+
+  await savePlantsToFirestore(userId, localPlants);
+
+  console.log("localStorageの植物をFirestoreへ移行しました");
+}
   } catch (error) {
     console.error("Firestore読み込み失敗:", error);
   }
