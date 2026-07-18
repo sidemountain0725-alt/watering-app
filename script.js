@@ -6,21 +6,25 @@ const defaultPlants = [
   {
     id: crypto.randomUUID(),
     name: "真柏",
-    lastWatered: getTodayString()
+    lastWatered: getTodayString(),
+    displayOrder: 0
   },
   {
     id: crypto.randomUUID(),
     name: "ストレリチア",
-    lastWatered: getDateStringDaysAgo(1)
+    lastWatered: getDateStringDaysAgo(1),
+    displayOrder: 1
   },
   {
     id: crypto.randomUUID(),
     name: "アグラオネマ",
-    lastWatered: getDateStringDaysAgo(2)
+    lastWatered: getDateStringDaysAgo(2),
+    displayOrder: 2
   }
 ];
 
 let plants = loadPlants();
+let sortable = null;
 
 const plantList = document.getElementById("plantList");
 const addPlantButton = document.getElementById("addPlantButton");
@@ -28,13 +32,15 @@ const addPlantButton = document.getElementById("addPlantButton");
 addPlantButton.addEventListener("click", addPlant);
 
 renderPlants();
+initializeSortable();
 
 function loadPlants() {
   const savedPlants = localStorage.getItem(STORAGE_KEY);
 
   if (!savedPlants) {
-    savePlants(defaultPlants);
-    return defaultPlants;
+    const initialPlants = normalizePlantOrder(defaultPlants);
+    savePlants(initialPlants);
+    return initialPlants;
   }
 
   try {
@@ -44,16 +50,33 @@ function loadPlants() {
       throw new Error("保存データの形式が正しくありません。");
     }
 
-    return parsedPlants;
+    return normalizePlantOrder(parsedPlants);
   } catch (error) {
-    console.error(error);
-    savePlants(defaultPlants);
-    return defaultPlants;
+    console.error("localStorageの読み込みに失敗しました:", error);
+
+    const initialPlants = normalizePlantOrder(defaultPlants);
+    savePlants(initialPlants);
+    return initialPlants;
   }
 }
 
 function savePlants(plantData = plants) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(plantData));
+}
+
+function normalizePlantOrder(plantData) {
+  return [...plantData]
+    .map((plant, index) => ({
+      ...plant,
+      displayOrder: Number.isFinite(plant.displayOrder)
+        ? plant.displayOrder
+        : index
+    }))
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((plant, index) => ({
+      ...plant,
+      displayOrder: index
+    }));
 }
 
 function renderPlants() {
@@ -71,13 +94,23 @@ function renderPlants() {
 
   plants.forEach((plant) => {
     const daysAgo = calculateDaysAgo(plant.lastWatered);
-
     const card = document.createElement("article");
+
     card.className = "plant-card";
+    card.dataset.id = plant.id;
 
     card.innerHTML = `
       <div class="plant-card-header">
-        <div>
+        <button
+          class="drag-handle"
+          type="button"
+          aria-label="${escapeHtml(plant.name)}を並び替え"
+          title="ドラッグして並び替え"
+        >
+          <span aria-hidden="true">⋮⋮</span>
+        </button>
+
+        <div class="plant-summary">
           <h2 class="plant-name">${escapeHtml(plant.name)}</h2>
 
           <p class="last-watered">
@@ -110,23 +143,55 @@ function renderPlants() {
       </button>
     `;
 
-    const waterButton = card.querySelector(".water-button");
-    const renameButton = card.querySelector(".rename-button");
-    const deleteButton = card.querySelector(".delete-button");
-
-    waterButton.addEventListener("click", () => {
+    card.querySelector(".water-button").addEventListener("click", () => {
       waterPlant(plant.id);
     });
 
-    renameButton.addEventListener("click", () => {
+    card.querySelector(".rename-button").addEventListener("click", () => {
       renamePlant(plant.id);
     });
 
-    deleteButton.addEventListener("click", () => {
+    card.querySelector(".delete-button").addEventListener("click", () => {
       deletePlant(plant.id);
     });
 
     plantList.appendChild(card);
+  });
+}
+
+function initializeSortable() {
+  if (typeof Sortable === "undefined") {
+    console.error("SortableJSを読み込めませんでした。");
+    return;
+  }
+
+  sortable = Sortable.create(plantList, {
+    animation: 180,
+    handle: ".drag-handle",
+    draggable: ".plant-card",
+    dataIdAttr: "data-id",
+    delay: 180,
+    delayOnTouchOnly: true,
+    touchStartThreshold: 4,
+    ghostClass: "sortable-ghost",
+    chosenClass: "sortable-chosen",
+    dragClass: "sortable-drag",
+
+    onEnd() {
+      const orderedIds = sortable.toArray();
+      const plantsById = new Map(plants.map((plant) => [plant.id, plant]));
+
+      plants = orderedIds
+        .map((id) => plantsById.get(id))
+        .filter(Boolean)
+        .map((plant, index) => ({
+          ...plant,
+          displayOrder: index
+        }));
+
+      savePlants();
+      savePlantOrderToCloud();
+    }
   });
 }
 
@@ -147,7 +212,8 @@ function addPlant() {
   const newPlant = {
     id: crypto.randomUUID(),
     name: trimmedName,
-    lastWatered: getTodayString()
+    lastWatered: getTodayString(),
+    displayOrder: plants.length
   };
 
   plants.push(newPlant);
@@ -208,26 +274,27 @@ function deletePlant(plantId) {
     return;
   }
 
-  const confirmed = window.confirm(
-    `「${plant.name}」を削除しますか？`
-  );
+  const confirmed = window.confirm(`「${plant.name}」を削除しますか？`);
 
   if (!confirmed) {
     return;
   }
 
-  plants = plants.filter((item) => item.id !== plantId);
+  plants = normalizePlantOrder(
+    plants.filter((item) => item.id !== plantId)
+  );
 
   savePlants();
   renderPlants();
   deletePlantFromCloud(plantId);
+  savePlantOrderToCloud();
 }
 
 function savePlantToCloud(plant) {
   if (typeof window.savePlantToFirestore === "function") {
     window.savePlantToFirestore(plant);
   } else {
-    console.warn("Firestore保存機能がまだ準備できていません");
+    console.warn("Firestore保存機能がまだ準備できていません。");
   }
 }
 
@@ -235,7 +302,15 @@ function deletePlantFromCloud(plantId) {
   if (typeof window.deletePlantFromFirestore === "function") {
     window.deletePlantFromFirestore(plantId);
   } else {
-    console.warn("Firestore削除機能がまだ準備できていません");
+    console.warn("Firestore削除機能がまだ準備できていません。");
+  }
+}
+
+function savePlantOrderToCloud() {
+  if (typeof window.savePlantOrderToFirestore === "function") {
+    window.savePlantOrderToFirestore(plants);
+  } else {
+    console.warn("Firestoreの並び順保存機能がまだ準備できていません。");
   }
 }
 
@@ -243,13 +318,17 @@ function calculateDaysAgo(dateString) {
   const lastWateredDate = parseLocalDate(dateString);
   const today = parseLocalDate(getTodayString());
 
+  if (
+    Number.isNaN(lastWateredDate.getTime()) ||
+    Number.isNaN(today.getTime())
+  ) {
+    return 0;
+  }
+
   const millisecondsPerDay = 24 * 60 * 60 * 1000;
   const difference = today.getTime() - lastWateredDate.getTime();
 
-  return Math.max(
-    0,
-    Math.floor(difference / millisecondsPerDay)
-  );
+  return Math.max(0, Math.floor(difference / millisecondsPerDay));
 }
 
 function getTodayString() {
@@ -272,7 +351,7 @@ function formatLocalDate(date) {
 }
 
 function parseLocalDate(dateString) {
-  const [year, month, day] = dateString
+  const [year, month, day] = String(dateString)
     .split("-")
     .map(Number);
 
@@ -280,7 +359,7 @@ function parseLocalDate(dateString) {
 }
 
 function escapeHtml(text) {
-  return text
+  return String(text)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -291,11 +370,16 @@ function escapeHtml(text) {
 window.renderPlants = renderPlants;
 
 window.setPlants = function (newPlants) {
-  plants = newPlants;
+  if (!Array.isArray(newPlants)) {
+    console.error("植物データの形式が正しくありません。");
+    return;
+  }
+
+  plants = normalizePlantOrder(newPlants);
   savePlants();
   renderPlants();
 };
 
 window.getPlants = function () {
-  return plants;
+  return plants.map((plant) => ({ ...plant }));
 };

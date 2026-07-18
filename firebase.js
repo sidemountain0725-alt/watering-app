@@ -18,7 +18,8 @@ import {
   getDocs,
   doc,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from
   "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -60,24 +61,32 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
+function createPlantData(plant, fallbackOrder = 0) {
+  return {
+    name: plant.name,
+    lastWatered: plant.lastWatered,
+    displayOrder: Number.isFinite(plant.displayOrder)
+      ? plant.displayOrder
+      : fallbackOrder
+  };
+}
+
 async function savePlantsToFirestore(userId, plants) {
   try {
-    for (const plant of plants) {
-      const plantRef = doc(
-        db,
-        "users",
-        userId,
-        "plants",
-        plant.id
+    const batch = writeBatch(db);
+
+    plants.forEach((plant, index) => {
+      const plantRef = doc(db, "users", userId, "plants", plant.id);
+
+      batch.set(
+        plantRef,
+        createPlantData(plant, index),
+        { merge: true }
       );
+    });
 
-      await setDoc(plantRef, {
-        name: plant.name,
-        lastWatered: plant.lastWatered
-      });
-    }
-
-    console.log("Firestoreへ保存成功");
+    await batch.commit();
+    console.log("植物一覧をFirestoreへ保存しました。");
   } catch (error) {
     console.error("Firestore保存失敗:", error);
   }
@@ -85,7 +94,7 @@ async function savePlantsToFirestore(userId, plants) {
 
 async function savePlantToFirestore(plant) {
   if (!currentUser) {
-    console.log("未ログインのためFirestoreには保存しません");
+    console.log("未ログインのためFirestoreには保存しません。");
     return;
   }
 
@@ -98,10 +107,11 @@ async function savePlantToFirestore(plant) {
       plant.id
     );
 
-    await setDoc(plantRef, {
-      name: plant.name,
-      lastWatered: plant.lastWatered
-    });
+    await setDoc(
+      plantRef,
+      createPlantData(plant),
+      { merge: true }
+    );
 
     console.log("植物をFirestoreへ保存:", plant.name);
   } catch (error) {
@@ -109,9 +119,41 @@ async function savePlantToFirestore(plant) {
   }
 }
 
+async function savePlantOrderToFirestore(plants) {
+  if (!currentUser) {
+    console.log("未ログインのため並び順をFirestoreには保存しません。");
+    return;
+  }
+
+  try {
+    const batch = writeBatch(db);
+
+    plants.forEach((plant, index) => {
+      const plantRef = doc(
+        db,
+        "users",
+        currentUser.uid,
+        "plants",
+        plant.id
+      );
+
+      batch.set(
+        plantRef,
+        { displayOrder: index },
+        { merge: true }
+      );
+    });
+
+    await batch.commit();
+    console.log("並び順をFirestoreへ保存しました。");
+  } catch (error) {
+    console.error("並び順のFirestore保存失敗:", error);
+  }
+}
+
 async function deletePlantFromFirestore(plantId) {
   if (!currentUser) {
-    console.log("未ログインのためFirestoreから削除しません");
+    console.log("未ログインのためFirestoreから削除しません。");
     return;
   }
 
@@ -125,11 +167,29 @@ async function deletePlantFromFirestore(plantId) {
     );
 
     await deleteDoc(plantRef);
-
     console.log("植物をFirestoreから削除:", plantId);
   } catch (error) {
     console.error("植物のFirestore削除失敗:", error);
   }
+}
+
+function applyLegacyOrder(firestorePlants, localPlants) {
+  const localOrder = new Map(
+    localPlants.map((plant, index) => [plant.id, index])
+  );
+
+  return firestorePlants
+    .map((plant, index) => ({
+      ...plant,
+      displayOrder: Number.isFinite(plant.displayOrder)
+        ? plant.displayOrder
+        : (localOrder.get(plant.id) ?? localPlants.length + index)
+    }))
+    .sort((a, b) => a.displayOrder - b.displayOrder)
+    .map((plant, index) => ({
+      ...plant,
+      displayOrder: index
+    }));
 }
 
 async function loadPlantsFromFirestore(userId) {
@@ -142,6 +202,7 @@ async function loadPlantsFromFirestore(userId) {
     );
 
     const snapshot = await getDocs(plantsCollection);
+    const localPlants = window.getPlants();
 
     const firestorePlants = snapshot.docs.map((document) => ({
       id: document.id,
@@ -151,15 +212,23 @@ async function loadPlantsFromFirestore(userId) {
     console.log("Firestoreから読み込み:", firestorePlants);
 
     if (firestorePlants.length > 0) {
-      window.setPlants(firestorePlants);
-    } else {
-      console.log("Firestoreにはまだ植物データがありません");
+      const orderedPlants = applyLegacyOrder(firestorePlants, localPlants);
 
-      const localPlants = window.getPlants();
+      window.setPlants(orderedPlants);
+
+      const needsOrderMigration = firestorePlants.some(
+        (plant) => !Number.isFinite(plant.displayOrder)
+      );
+
+      if (needsOrderMigration) {
+        await savePlantsToFirestore(userId, orderedPlants);
+        console.log("既存データへ並び順を追加しました。");
+      }
+    } else {
+      console.log("Firestoreにはまだ植物データがありません。");
 
       await savePlantsToFirestore(userId, localPlants);
-
-      console.log("localStorageの植物をFirestoreへ移行しました");
+      console.log("localStorageの植物をFirestoreへ移行しました。");
     }
   } catch (error) {
     console.error("Firestore読み込み失敗:", error);
@@ -168,6 +237,7 @@ async function loadPlantsFromFirestore(userId) {
 
 window.savePlantToFirestore = savePlantToFirestore;
 window.deletePlantFromFirestore = deletePlantFromFirestore;
+window.savePlantOrderToFirestore = savePlantOrderToFirestore;
 
 onAuthStateChanged(auth, async (user) => {
   currentUser = user;

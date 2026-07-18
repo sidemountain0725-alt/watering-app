@@ -47,6 +47,26 @@ h1 {
   line-height: 1.1;
 }
 
+.auth-area {
+  margin-top: 14px;
+}
+
+#user-info {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #68736c;
+}
+
+#login-button,
+#logout-button {
+  padding: 7px 11px;
+  border: 1px solid #bdc9c0;
+  border-radius: 10px;
+  color: #355f49;
+  background: #ffffff;
+  cursor: pointer;
+}
+
 .add-button {
   flex-shrink: 0;
   padding: 11px 16px;
@@ -57,7 +77,9 @@ h1 {
   cursor: pointer;
 }
 
-.add-button:active {
+.add-button:active,
+#login-button:active,
+#logout-button:active {
   transform: scale(0.98);
 }
 
@@ -72,17 +94,52 @@ h1 {
   border-radius: 20px;
   background: #ffffff;
   box-shadow: 0 8px 24px rgb(33 56 43 / 6%);
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    opacity 160ms ease;
 }
 
 .plant-card-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.drag-handle {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 40px;
+  margin: -4px 0 0 -8px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: -0.3em;
+  color: #879189;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+  background: #eef3ef;
+}
+
+.plant-summary {
+  min-width: 0;
 }
 
 .plant-name {
   margin: 0 0 5px;
+  overflow-wrap: anywhere;
   font-size: 22px;
 }
 
@@ -140,6 +197,19 @@ h1 {
   color: #68736c;
 }
 
+.sortable-ghost {
+  opacity: 0.35;
+}
+
+.sortable-chosen {
+  box-shadow: 0 14px 34px rgb(33 56 43 / 14%);
+}
+
+.sortable-drag {
+  transform: rotate(1deg);
+  opacity: 0.96;
+}
+
 @media (max-width: 520px) {
   .container {
     width: min(100% - 24px, 720px);
@@ -149,5 +219,19 @@ h1 {
   .header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .plant-card {
+    padding: 17px;
+  }
+
+  .plant-card-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .card-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+    margin-left: -8px;
   }
 }
