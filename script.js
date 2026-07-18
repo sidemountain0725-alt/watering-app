@@ -15,15 +15,10 @@ const defaultPlants = [
   }, 
   {
     id: crypto.randomUUID(),
-    name: "アグラオネマカーティシー",
-    lastWatered: getDateStringDaysAgo(1)
+    name: "アグラオネマ",
+    lastWatered: getDateStringDaysAgo(2)
   },
-  {
-    id: crypto.randomUUID(),
-    name: "アグラオネマシルバークイーン",
-    lastWatered: getDateStringDaysAgo(1)
-  }
-];
+ ];
 
 let plants = loadPlants();
 
@@ -272,3 +267,9 @@ function escapeHtml(text) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 }
+
+window.renderPlants = renderPlants;
+window.setPlants = function(newPlants) {
+  plants = newPlants;
+  renderPlants();
+};
