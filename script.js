@@ -147,14 +147,18 @@ function addPlant() {
     return;
   }
 
-  plants.push({
-    id: crypto.randomUUID(),
-    name: trimmedName,
-    lastWatered: getTodayString()
-  });
+  const newPlant = {
+  id: crypto.randomUUID(),
+  name: trimmedName,
+  lastWatered: getTodayString()
+    };
 
-  savePlants();
-  renderPlants();
+    plants.push(newPlant);
+
+    savePlants();
+    renderPlants();
+
+    window.savePlantToFirestore(newPlant);
 }
 
 function waterPlant(plantId) {
@@ -164,10 +168,12 @@ function waterPlant(plantId) {
     return;
   }
 
-  plant.lastWatered = getTodayString();
+ plant.lastWatered = getTodayString();
 
-  savePlants();
-  renderPlants();
+    savePlants();
+    renderPlants();
+
+    window.savePlantToFirestore(plant);
 }
 
 function renamePlant(plantId) {
@@ -193,10 +199,12 @@ function renamePlant(plantId) {
     return;
   }
 
-  plant.name = trimmedName;
+ plant.name = trimmedName;
 
-  savePlants();
-  renderPlants();
+    savePlants();
+    renderPlants();
+
+    window.savePlantToFirestore(plant);
 }
 
 function deletePlant(plantId) {
@@ -214,10 +222,12 @@ function deletePlant(plantId) {
     return;
   }
 
-  plants = plants.filter((item) => item.id !== plantId);
+    plants = plants.filter((item) => item.id !== plantId);
 
-  savePlants();
-  renderPlants();
+    savePlants();
+    renderPlants();
+
+    window.deletePlantFromFirestore(plantId);
 }
 
 function calculateDaysAgo(dateString) {
