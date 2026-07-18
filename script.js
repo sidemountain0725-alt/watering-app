@@ -12,13 +12,13 @@ const defaultPlants = [
     id: crypto.randomUUID(),
     name: "ストレリチア",
     lastWatered: getDateStringDaysAgo(1)
-  }, 
+  },
   {
     id: crypto.randomUUID(),
     name: "アグラオネマ",
     lastWatered: getDateStringDaysAgo(2)
-  },
- ];
+  }
+];
 
 let plants = loadPlants();
 
@@ -86,26 +86,23 @@ function renderPlants() {
           </p>
         </div>
 
-    
-
         <div class="card-actions">
-        <button
+          <button
             class="rename-button"
             type="button"
             aria-label="${escapeHtml(plant.name)}の名前を変更"
-        >
+          >
             名前変更
-        </button>
+          </button>
 
-        <button
+          <button
             class="delete-button"
             type="button"
             aria-label="${escapeHtml(plant.name)}を削除"
-        >
+          >
             削除
-        </button>
+          </button>
         </div>
-        
       </div>
 
       <button class="water-button" type="button">
@@ -122,7 +119,7 @@ function renderPlants() {
     });
 
     renameButton.addEventListener("click", () => {
-    renamePlant(plant.id);
+      renamePlant(plant.id);
     });
 
     deleteButton.addEventListener("click", () => {
@@ -148,17 +145,16 @@ function addPlant() {
   }
 
   const newPlant = {
-  id: crypto.randomUUID(),
-  name: trimmedName,
-  lastWatered: getTodayString()
-    };
+    id: crypto.randomUUID(),
+    name: trimmedName,
+    lastWatered: getTodayString()
+  };
 
-    plants.push(newPlant);
+  plants.push(newPlant);
 
-    savePlants();
-    renderPlants();
-
-    window.savePlantToFirestore(newPlant);
+  savePlants();
+  renderPlants();
+  savePlantToCloud(newPlant);
 }
 
 function waterPlant(plantId) {
@@ -168,12 +164,11 @@ function waterPlant(plantId) {
     return;
   }
 
- plant.lastWatered = getTodayString();
+  plant.lastWatered = getTodayString();
 
-    savePlants();
-    renderPlants();
-
-    window.savePlantToFirestore(plant);
+  savePlants();
+  renderPlants();
+  savePlantToCloud(plant);
 }
 
 function renamePlant(plantId) {
@@ -199,12 +194,11 @@ function renamePlant(plantId) {
     return;
   }
 
- plant.name = trimmedName;
+  plant.name = trimmedName;
 
-    savePlants();
-    renderPlants();
-
-    window.savePlantToFirestore(plant);
+  savePlants();
+  renderPlants();
+  savePlantToCloud(plant);
 }
 
 function deletePlant(plantId) {
@@ -222,12 +216,27 @@ function deletePlant(plantId) {
     return;
   }
 
-    plants = plants.filter((item) => item.id !== plantId);
+  plants = plants.filter((item) => item.id !== plantId);
 
-    savePlants();
-    renderPlants();
+  savePlants();
+  renderPlants();
+  deletePlantFromCloud(plantId);
+}
 
+function savePlantToCloud(plant) {
+  if (typeof window.savePlantToFirestore === "function") {
+    window.savePlantToFirestore(plant);
+  } else {
+    console.warn("Firestore保存機能がまだ準備できていません");
+  }
+}
+
+function deletePlantFromCloud(plantId) {
+  if (typeof window.deletePlantFromFirestore === "function") {
     window.deletePlantFromFirestore(plantId);
+  } else {
+    console.warn("Firestore削除機能がまだ準備できていません");
+  }
 }
 
 function calculateDaysAgo(dateString) {
@@ -237,13 +246,14 @@ function calculateDaysAgo(dateString) {
   const millisecondsPerDay = 24 * 60 * 60 * 1000;
   const difference = today.getTime() - lastWateredDate.getTime();
 
-  return Math.max(0, Math.floor(difference / millisecondsPerDay));
+  return Math.max(
+    0,
+    Math.floor(difference / millisecondsPerDay)
+  );
 }
 
 function getTodayString() {
-  const today = new Date();
-
-  return formatLocalDate(today);
+  return formatLocalDate(new Date());
 }
 
 function getDateStringDaysAgo(daysAgo) {
@@ -279,10 +289,13 @@ function escapeHtml(text) {
 }
 
 window.renderPlants = renderPlants;
-window.setPlants = function(newPlants) {
+
+window.setPlants = function (newPlants) {
   plants = newPlants;
+  savePlants();
   renderPlants();
 };
+
 window.getPlants = function () {
   return plants;
 };

@@ -17,7 +17,8 @@ import {
   collection,
   getDocs,
   doc,
-  setDoc
+  setDoc,
+  deleteDoc
 } from
   "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 
@@ -30,11 +31,12 @@ const firebaseConfig = {
   appId: "1:369821340152:web:5303d5465f1d3dda9d460d"
 };
 
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
+
+let currentUser = null;
 
 const loginButton = document.getElementById("login-button");
 const logoutButton = document.getElementById("logout-button");
@@ -54,6 +56,7 @@ logoutButton.addEventListener("click", async () => {
     await signOut(auth);
   } catch (error) {
     console.error("ログアウト失敗:", error);
+    alert("ログアウトに失敗しました。");
   }
 });
 
@@ -80,6 +83,55 @@ async function savePlantsToFirestore(userId, plants) {
   }
 }
 
+async function savePlantToFirestore(plant) {
+  if (!currentUser) {
+    console.log("未ログインのためFirestoreには保存しません");
+    return;
+  }
+
+  try {
+    const plantRef = doc(
+      db,
+      "users",
+      currentUser.uid,
+      "plants",
+      plant.id
+    );
+
+    await setDoc(plantRef, {
+      name: plant.name,
+      lastWatered: plant.lastWatered
+    });
+
+    console.log("植物をFirestoreへ保存:", plant.name);
+  } catch (error) {
+    console.error("植物のFirestore保存失敗:", error);
+  }
+}
+
+async function deletePlantFromFirestore(plantId) {
+  if (!currentUser) {
+    console.log("未ログインのためFirestoreから削除しません");
+    return;
+  }
+
+  try {
+    const plantRef = doc(
+      db,
+      "users",
+      currentUser.uid,
+      "plants",
+      plantId
+    );
+
+    await deleteDoc(plantRef);
+
+    console.log("植物をFirestoreから削除:", plantId);
+  } catch (error) {
+    console.error("植物のFirestore削除失敗:", error);
+  }
+}
+
 async function loadPlantsFromFirestore(userId) {
   try {
     const plantsCollection = collection(
@@ -98,23 +150,28 @@ async function loadPlantsFromFirestore(userId) {
 
     console.log("Firestoreから読み込み:", firestorePlants);
 
-  if (firestorePlants.length > 0) {
-  window.setPlants(firestorePlants);
-} else {
-  console.log("Firestoreにはまだ植物データがありません");
+    if (firestorePlants.length > 0) {
+      window.setPlants(firestorePlants);
+    } else {
+      console.log("Firestoreにはまだ植物データがありません");
 
-  const localPlants = window.getPlants();
+      const localPlants = window.getPlants();
 
-  await savePlantsToFirestore(userId, localPlants);
+      await savePlantsToFirestore(userId, localPlants);
 
-  console.log("localStorageの植物をFirestoreへ移行しました");
-}
+      console.log("localStorageの植物をFirestoreへ移行しました");
+    }
   } catch (error) {
     console.error("Firestore読み込み失敗:", error);
   }
 }
 
+window.savePlantToFirestore = savePlantToFirestore;
+window.deletePlantFromFirestore = deletePlantFromFirestore;
+
 onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+
   if (user) {
     console.log("ログイン成功:", user);
 
@@ -135,7 +192,3 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 console.log("Firebase接続成功", app);
-
-
-
-
