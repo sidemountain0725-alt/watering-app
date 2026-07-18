@@ -1,0 +1,141 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  color: #1f2a24;
+  background: #f2f5f1;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.container {
+  width: min(100% - 32px, 720px);
+  margin: 0 auto;
+  padding: 40px 0 80px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #6c8274;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(30px, 8vw, 44px);
+  line-height: 1.1;
+}
+
+.add-button {
+  flex-shrink: 0;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #355f49;
+  cursor: pointer;
+}
+
+.add-button:active {
+  transform: scale(0.98);
+}
+
+.plant-list {
+  display: grid;
+  gap: 16px;
+}
+
+.plant-card {
+  padding: 20px;
+  border: 1px solid #dbe3dc;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgb(33 56 43 / 6%);
+}
+
+.plant-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.plant-name {
+  margin: 0 0 5px;
+  font-size: 22px;
+}
+
+.last-watered {
+  margin: 0;
+  color: #68736c;
+}
+
+.days-number {
+  font-weight: 700;
+  color: #355f49;
+}
+
+.water-button {
+  width: 100%;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 14px;
+  font-weight: 700;
+  color: #254533;
+  background: #dcecdf;
+  cursor: pointer;
+}
+
+.water-button:active {
+  transform: scale(0.99);
+}
+
+.delete-button {
+  align-self: flex-start;
+  padding: 4px 8px;
+  border: none;
+  color: #879189;
+  background: transparent;
+  cursor: pointer;
+}
+
+.empty-message {
+  padding: 40px 20px;
+  border: 1px dashed #bdc9c0;
+  border-radius: 20px;
+  text-align: center;
+  color: #68736c;
+}
+
+@media (max-width: 520px) {
+  .container {
+    width: min(100% - 24px, 720px);
+    padding-top: 24px;
+  }
+
+  .header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
