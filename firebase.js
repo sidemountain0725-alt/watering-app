@@ -12,6 +12,13 @@ import {
 } from
   "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 
+import {
+  getFirestore,
+  collection,
+  getDocs
+} from
+  "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDFAmSgQDayXOa-Ib7A-kYUvU9odWYDDYI",
   authDomain: "watering-app-a08cf.firebaseapp.com",
@@ -24,6 +31,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 const loginButton = document.getElementById("login-button");
@@ -47,7 +55,35 @@ logoutButton.addEventListener("click", async () => {
   }
 });
 
-onAuthStateChanged(auth, (user) => {
+async function loadPlantsFromFirestore(userId) {
+  try {
+    const plantsCollection = collection(
+      db,
+      "users",
+      userId,
+      "plants"
+    );
+
+    const snapshot = await getDocs(plantsCollection);
+
+    const firestorePlants = snapshot.docs.map((document) => ({
+      id: document.id,
+      ...document.data()
+    }));
+
+    console.log("Firestoreから読み込み:", firestorePlants);
+
+    if (firestorePlants.length > 0) {
+      window.setPlants(firestorePlants);
+    } else {
+      console.log("Firestoreにはまだ植物データがありません");
+    }
+  } catch (error) {
+    console.error("Firestore読み込み失敗:", error);
+  }
+}
+
+onAuthStateChanged(auth, async (user) => {
   if (user) {
     console.log("ログイン成功:", user);
 
@@ -56,6 +92,8 @@ onAuthStateChanged(auth, (user) => {
 
     loginButton.hidden = true;
     logoutButton.hidden = false;
+
+    await loadPlantsFromFirestore(user.uid);
   } else {
     console.log("ログアウト状態");
 
