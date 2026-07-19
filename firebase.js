@@ -67,7 +67,11 @@ function createPlantData(plant, fallbackOrder = 0) {
     lastWatered: plant.lastWatered,
     displayOrder: Number.isFinite(plant.displayOrder)
       ? plant.displayOrder
-      : fallbackOrder
+      : fallbackOrder,
+    wateringInterval: Number.isInteger(plant.wateringInterval) &&
+      plant.wateringInterval > 0
+      ? plant.wateringInterval
+      : 7
   };
 }
 
@@ -183,7 +187,11 @@ function applyLegacyOrder(firestorePlants, localPlants) {
       ...plant,
       displayOrder: Number.isFinite(plant.displayOrder)
         ? plant.displayOrder
-        : (localOrder.get(plant.id) ?? localPlants.length + index)
+        : (localOrder.get(plant.id) ?? localPlants.length + index),
+      wateringInterval: Number.isInteger(plant.wateringInterval) &&
+        plant.wateringInterval > 0
+        ? plant.wateringInterval
+        : 7
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .map((plant, index) => ({
@@ -216,13 +224,16 @@ async function loadPlantsFromFirestore(userId) {
 
       window.setPlants(orderedPlants);
 
-      const needsOrderMigration = firestorePlants.some(
-        (plant) => !Number.isFinite(plant.displayOrder)
+      const needsDataMigration = firestorePlants.some(
+        (plant) =>
+          !Number.isFinite(plant.displayOrder) ||
+          !Number.isInteger(plant.wateringInterval) ||
+          plant.wateringInterval < 1
       );
 
-      if (needsOrderMigration) {
+      if (needsDataMigration) {
         await savePlantsToFirestore(userId, orderedPlants);
-        console.log("既存データへ並び順を追加しました。");
+        console.log("既存データへ並び順・目安日数を追加しました。");
       }
     } else {
       console.log("Firestoreにはまだ植物データがありません。");

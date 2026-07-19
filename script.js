@@ -7,19 +7,22 @@ const defaultPlants = [
     id: crypto.randomUUID(),
     name: "真柏",
     lastWatered: getTodayString(),
-    displayOrder: 0
+    displayOrder: 0,
+    wateringInterval: 7
   },
   {
     id: crypto.randomUUID(),
     name: "ストレリチア",
     lastWatered: getDateStringDaysAgo(1),
-    displayOrder: 1
+    displayOrder: 1,
+    wateringInterval: 7
   },
   {
     id: crypto.randomUUID(),
     name: "アグラオネマ",
     lastWatered: getDateStringDaysAgo(2),
-    displayOrder: 2
+    displayOrder: 2,
+    wateringInterval: 7
   }
 ];
 
@@ -70,7 +73,11 @@ function normalizePlantOrder(plantData) {
       ...plant,
       displayOrder: Number.isFinite(plant.displayOrder)
         ? plant.displayOrder
-        : index
+        : index,
+      wateringInterval: Number.isInteger(plant.wateringInterval) &&
+        plant.wateringInterval > 0
+        ? plant.wateringInterval
+        : 7
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder)
     .map((plant, index) => ({
@@ -94,6 +101,7 @@ function renderPlants() {
 
   plants.forEach((plant) => {
     const daysAgo = calculateDaysAgo(plant.lastWatered);
+    const isWateringDue = daysAgo >= plant.wateringInterval;
     const card = document.createElement("article");
 
     card.className = "plant-card";
@@ -107,7 +115,7 @@ function renderPlants() {
           aria-label="${escapeHtml(plant.name)}を並び替え"
           title="ドラッグして並び替え"
         >
-          <span aria-hidden="true">⋮⋮</span>
+          <span aria-hidden="true">⋮</span>
         </button>
 
         <div class="plant-summary">
@@ -115,7 +123,11 @@ function renderPlants() {
 
           <p class="last-watered">
             最後の水やりから
-            <span class="days-number">${daysAgo}日</span>
+            <span class="days-number${isWateringDue ? " is-due" : ""}">${daysAgo}日</span>
+          </p>
+
+          <p class="watering-interval">
+            目安：${plant.wateringInterval}日
           </p>
         </div>
 
@@ -126,6 +138,14 @@ function renderPlants() {
             aria-label="${escapeHtml(plant.name)}の名前を変更"
           >
             名前変更
+          </button>
+
+          <button
+            class="interval-button"
+            type="button"
+            aria-label="${escapeHtml(plant.name)}の目安日数を設定"
+          >
+            目安設定
           </button>
 
           <button
@@ -149,6 +169,10 @@ function renderPlants() {
 
     card.querySelector(".rename-button").addEventListener("click", () => {
       renamePlant(plant.id);
+    });
+
+    card.querySelector(".interval-button").addEventListener("click", () => {
+      setWateringInterval(plant.id);
     });
 
     card.querySelector(".delete-button").addEventListener("click", () => {
@@ -213,7 +237,8 @@ function addPlant() {
     id: crypto.randomUUID(),
     name: trimmedName,
     lastWatered: getTodayString(),
-    displayOrder: plants.length
+    displayOrder: plants.length,
+    wateringInterval: 7
   };
 
   plants.push(newPlant);
@@ -261,6 +286,36 @@ function renamePlant(plantId) {
   }
 
   plant.name = trimmedName;
+
+  savePlants();
+  renderPlants();
+  savePlantToCloud(plant);
+}
+
+function setWateringInterval(plantId) {
+  const plant = plants.find((item) => item.id === plantId);
+
+  if (!plant) {
+    return;
+  }
+
+  const input = window.prompt(
+    `「${plant.name}」は何日ごとに水やりしますか？`,
+    String(plant.wateringInterval)
+  );
+
+  if (input === null) {
+    return;
+  }
+
+  const wateringInterval = Number(input.trim());
+
+  if (!Number.isInteger(wateringInterval) || wateringInterval < 1) {
+    window.alert("1以上の整数を入力してください。");
+    return;
+  }
+
+  plant.wateringInterval = wateringInterval;
 
   savePlants();
   renderPlants();
